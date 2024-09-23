@@ -1,0 +1,13 @@
+FROM python
+
+WORKDIR /app
+
+COPY robo2.py /app/
+
+COPY logg.py /app/
+
+COPY requirements.txt /app/
+
+RUN pip install -r requirements.txt
+
+CMD ["python","robo2.py"]

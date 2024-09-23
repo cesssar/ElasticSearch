@@ -1,0 +1,74 @@
+version: '3.6'
+
+services:
+  robo:
+    build: .
+    container_name: robo_com_logs
+    volumes:
+      - ./app_logs:/app_logs
+    depends_on:
+      - elasticsearch
+
+  robo2:
+    build: 
+      context: .
+      dockerfile: Dockerfile_robo2
+    container_name: robo_com_logs_2
+    volumes:
+      - ./app_logs:/app_logs
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.1
+    container_name: filebeat
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./app_logs:/app_logs
+    command: bash -c "chmod go-w /usr/share/filebeat/filebeat.yml && filebeat -e -c /usr/share/filebeat/filebeat.yml"
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=${ELASTICSEARCH_HOST}
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.1
+    container_name: elasticsearch
+    environment:
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTIC_PASSWORD=${ELASTICSEARCH_PASSWORD}
+      - node.name=elasticsearch
+    volumes:
+        - ./esdata/:/usr/share/elasticsearch/data
+        - ./eslog:/usr/share/elasticsearch/logs 
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    restart: on-failure
+    deploy:
+      mode: replicated
+      replicas: 1
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.1
+    container_name: kibana
+    ports:
+      - "5601:5601" 
+    depends_on:
+      - elasticsearch
+    environment:
+      - xpack.security.authc.http.enabled=false
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_HOST}
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=${ELASTICSEARCH_SERVICEACCOUNTTOKEN}

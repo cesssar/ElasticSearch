@@ -1,0 +1,8 @@
+esdata/
+eslog/
+kibana_data/
+notas/
+venv/
+app_logs/*
+.env
+__pycache__/
